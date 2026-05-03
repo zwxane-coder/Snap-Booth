@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapbooth Camera</title>
+
+<link rel="stylesheet" href="cs2.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="effects-panel" id="effectsPanel">
+    <div class="effect" data-effect="none">Normal</div>
+    <div class="effect" data-effect="grayscale">Grayscale</div>
+    <div class="effect" data-effect="invert">Invert</div>
+    <div class="effect" data-effect="sepia">Sepia</div>
+</div>
+
+<div class="countdown" id="countdown"></div>
+
+<div class="app-window">
+
+    <div class="top-bar">
+        <div class="window-buttons">
+            <span class="circle red"></span>
+            <span class="circle yellow"></span>
+            <span class="circle green"></span>
+        </div>
+
+        <h2>SNAPBOOTH</h2>
+        <a href="index.html" class="back-btn">← Back</a>
+    </div>
+
+    <div class="camera-container">
+
+        <div class="filter-controls">
+            <button id="prevFilter">←</button>
+            <button id="nextFilter">→</button>
+        </div>
+
+        <div id="filterLabel"></div>
+
+        <video id="video" autoplay playsinline></video>
+    </div>
+
+    <div class="bottom-bar">
+
+        <div class="gallery-strip">
+            <div class="photo"></div>
+            <div class="photo"></div>
+            <div class="photo"></div>
+            <div class="photo"></div>
+        </div>
+
+        <button id="capture-btn">
+            <img src="camlogo.png" alt="Profile">
+        </button>
+
+        
+
+    </div>
+
+</div>
+
+<script>
+const video = document.getElementById('video');
+const captureBtn = document.getElementById('capture-btn');
+const countdown = document.getElementById('countdown');
+const photos = document.querySelectorAll('.photo');
+
+const filterLabel = document.getElementById("filterLabel");
+
+let photoIndex = 0;
+let isCounting = false;
+
+const filters = ["none", "grayscale", "invert", "sepia"];
+let filterIndex = 0;
+let currentEffect = "none";
+
+/* SOUND */
+const countdownSound = new Audio("countdownsd.mp3");
+const shutterSound = new Audio("shutter.mp3");
+
+/* CAMERA */
+async function startCamera(){
+    const stream = await navigator.mediaDevices.getUserMedia({video:true});
+    video.srcObject = stream;
+}
+startCamera();
+
+/* FILTER */
+function applyFilter(){
+
+    video.classList.remove("grayscale","invert","sepia");
+
+    currentEffect = filters[filterIndex];
+
+    if(currentEffect !== "none"){
+        video.classList.add(currentEffect);
+    }
+
+    showLabel(currentEffect);
+}
+
+function showLabel(name){
+    filterLabel.innerText = name.toUpperCase();
+    filterLabel.style.opacity = "1";
+
+    setTimeout(()=>{
+        filterLabel.style.opacity = "0";
+    },700);
+}
+
+/* ARROWS */
+document.getElementById("nextFilter").onclick = () => {
+    filterIndex++;
+    if(filterIndex >= filters.length) filterIndex = 0;
+    applyFilter();
+};
+
+document.getElementById("prevFilter").onclick = () => {
+    filterIndex--;
+    if(filterIndex < 0) filterIndex = filters.length - 1;
+    applyFilter();
+};
+
+
+document.querySelectorAll('.effect').forEach(btn=>{
+    btn.onclick = () => {
+        filterIndex = filters.indexOf(btn.dataset.effect);
+        applyFilter();
+        effectsPanel.style.display = "none";
+    };
+});
+
+/* COUNTDOWN */
+captureBtn.onclick = () => {
+
+    if(isCounting) return;
+    isCounting = true;
+
+    let count = 3;
+
+    countdown.style.display = "block";
+    countdown.innerText = count;
+
+    countdownSound.cloneNode().play();
+
+    let timer = setInterval(()=>{
+        count--;
+
+        if(count > 0){
+            countdown.innerText = count;
+        } else {
+            clearInterval(timer);
+            countdown.style.display = "none";
+            isCounting = false;
+            takePhoto();
+        }
+    },1000);
+};
+
+/* PHOTO */
+function takePhoto(){
+
+    shutterSound.cloneNode().play();
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.filter = getComputedStyle(video).filter;
+    ctx.translate(canvas.width,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(video,0,0);
+
+    const img = canvas.toDataURL("image/png");
+
+    if(photoIndex >= photos.length) photoIndex = 0;
+
+    photos[photoIndex].style.backgroundImage = `url(${img})`;
+    photos[photoIndex].style.backgroundSize = "cover";
+    photos[photoIndex].style.backgroundPosition = "center";
+
+    photoIndex++;
+
+    const a = document.createElement("a");
+    a.href = img;
+    a.download = "snapbooth.png";
+    a.click();
+}
+</script>
+
+</body>
+</html>
